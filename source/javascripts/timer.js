@@ -1,7 +1,11 @@
 var pages = pages || {};
 
 pages.timer = pages.timer || (function() {
-	  var counter;
+    var cacheKeys = {
+        time: 'Jahed:Agility:time',
+        mobsters: 'Jahed:Agility:mobsters'
+    };
+	var counter;
     var pageTitle;
     var counterText;
     var turnText;
@@ -57,8 +61,15 @@ pages.timer = pages.timer || (function() {
 
         turnText = $('.turn-text');
 
-        mobsters = [];
+        var cachedMobsters = localStorage.getItem(cacheKeys.mobsters);
+        mobsters = cachedMobsters != null ? JSON.parse(cachedMobsters) : [];
         currentMobsterIndex = 0;
+
+        $.each(mobsters, function(i, mobster) {
+            console.log(i, mobster);
+            _addMobster(mobster, i);
+        });
+        updatePageTitle();
 
         counter.bind('click', function onClick() {
             if(state === State.STOPPED) {
@@ -89,18 +100,15 @@ pages.timer = pages.timer || (function() {
         stopCounter();
     }
 
-    function addMobster() {
-        var id = mobsters.length;
-
+    function _addMobster(mobster, id) {
+        var mobster = mobster;
         var $mobster = $(Mustache.render(mobsterTemplate, {
-            id: id
+            id: id,
+            name: mobster.name
         }));
 
-        var mobster = {
-            root: $mobster,
-            name: $mobster.find('.mobster-control-name')[0],
-            disabled: false
-        };
+        mobster.root = $mobster;
+
 
         $mobster.find('.mobster-control-turn').bind('click', function() {
             if(mobster.disabled) return;
@@ -137,13 +145,22 @@ pages.timer = pages.timer || (function() {
                 mobster.root.addClass('disabled');
             }
         });
+        mobsterContainer.append(mobster.root);
+
+        return mobster;
+    }
+
+    function addMobster() {
+        var mobster = _addMobster({ name: 'Mobster ' + mobsters.length }, mobsters.length);
 
         mobsters.push(mobster);
-        mobsterContainer.append(mobster.root);
+        localStorage.setItem(cacheKeys.mobsters, JSON.stringify(mobsters));
     }
 
     function parsePeriodInput() {
-        return parseInt(periodInput[0].value,10)*60;
+        var time = parseInt(periodInput[0].value,10)*60
+        localStorage.setItem(cacheKeys.time, time);
+        return time;
     }
 
     function resetTime() {
@@ -276,7 +293,7 @@ pages.timer = pages.timer || (function() {
     }
 
     function getCurrentMobsterName() {
-        return mobsters[currentMobsterIndex].name.value;
+        return mobsters[currentMobsterIndex].name;
     }
 
     function stopCounter() {
